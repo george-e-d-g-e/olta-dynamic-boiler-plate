@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Olta Dynamic Boiler Plate</title>
+</head>
+
+<body>
+</body>
+<script type="module">
+  import { utils } from "./utils.js"
+
+  // change these to query different projects when developing locally
+  const PROJECT_ADDRESS = "0x07428b7a16bf805787d3c3546c9b40a10dbd3a57"
+  const EDITION_NUMBER = 1
+  const SUBGRAPH_URL = "https://api.thegraph.com/subgraphs/name/olta-art/mumbai-v1"
+  // changed to "https://api.thegraph.com/subgraphs/name/olta-art/polygon-v1" in production
+
+  utils.prepareLocalDev(EDITION_NUMBER, PROJECT_ADDRESS)
+
+  // get the edition id and the project address
+  const { id, address } = utils.getSearchParams("id", "address")
+
+  // fetch the query and call the start function when it returns
+  utils.queryfetcher(SUBGRAPH_URL, createQuery(id, address))
+    .then(start)
+    .catch((e) => {
+      console.log(e)
+    })
+
+  function start(data = {}) {
+
+    // DO STUFF HERE
+    console.log(data)
+
+    // percentage of editions sold
+    const { editionSize, totalMinted } = data?.project
+    const percentageSold = totalMinted / editionSize * 100
+    console.log("percentage sold:", `${percentageSold}%`)
+
+    // total editons in this project owned by the owner of this edition
+    const { collection } = data?.edition?.owner
+    console.log("total owned by owner:", collection?.length)
+  }
+
+  // QUERY
+  // see https://api.thegraph.com/subgraphs/name/olta-art/mumbai-v1/graphql?query=query+MyQuery+%7B%0A++project%28id%3A+%220x07428b7a16bf805787d3c3546c9b40a10dbd3a57%22%29+%7B%0A++++totalMinted%0A++++editionSize%0A++%7D%0A++edition%28id%3A+%220x07428b7a16bf805787d3c3546c9b40a10dbd3a57-1%22%29+%7B%0A++++id%0A++++transfers+%7B%0A++++++transactionHash%0A++++++from+%7B%0A++++++++id%0A++++++%7D%0A++++++to+%7B%0A++++++++id%0A++++++%7D%0A++++%7D%0A++++number%0A++++owner+%7B%0A++++++id%0A++++++collection%28%0A++++++++where%3A+%7Bproject_%3A+%7Bid%3A+%220x07428b7a16bf805787d3c3546c9b40a10dbd3a57%22%7D%7D%0A++++++%29+%7B%0A++++++++id%0A++++++++number%0A++++++%7D%0A++++%7D%0A++%7D%0A%7D
+
+  function createQuery(id, address) {
+    return `
+      query {
+        project(id: "${address}") {
+          totalMinted
+          editionSize
+        }
+        edition(id: "${address}-${id}") {
+          id
+          transfers {
+            transactionHash
+            from {
+              id
+            }
+            to {
+              id
+            }
+          }
+          number
+          owner {
+            id
+            collection(
+              where: {project_: {id: "${address}"}}
+            ) {
+              id
+              number
+            }
+          }
+        }
+      }
+    `
+  }
+</script>
+
+</html>
